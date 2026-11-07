@@ -1,0 +1,16 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# macOS files
+.DS_Store
+
+# Personal game data
+highscore.txt
+
+# Environment variables
+.env
