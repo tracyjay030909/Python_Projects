@@ -514,8 +514,8 @@ def gameLoop():
                 snakeBody.pop()
 
                 # IF you win the game
-            # if len(snakeBody) == totalSquares:
-            if score == 1:
+            if len(snakeBody) == totalSquares:
+            
                 result = youWin(level)
                 if result == "RESTART":
                     return "RESTART"
