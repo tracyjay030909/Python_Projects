@@ -11,6 +11,43 @@ import time
 from pathlib import Path
 
 check_errors = pygame.init()
+pygame.mixer.init()
+
+        # MUSIC 
+musicVolume = 0.3
+soundVolume = 0.5
+
+BASE_DIR = Path(__file__).resolve().parent
+musicPath = BASE_DIR / "assets" / "audio" / "background.ogg"
+
+pygame.mixer.music.load(str(musicPath))
+pygame.mixer.music.set_volume(musicVolume)
+pygame.mixer.music.play(-1)
+
+levelMusic = {
+    1: 'background.ogg',
+    2: 'level2.ogg',
+    3: 'level3.ogg'
+}
+
+        # SOUND EFFECTS
+eatSoundPath = BASE_DIR / "assets" / "audio" / "eat.mp3"
+
+eatSound = pygame.mixer.Sound(str(eatSoundPath))
+eatSound.set_volume(soundVolume)
+
+levelUpSoundPath = BASE_DIR / "assets" / "audio" / "levelup.mp3"
+
+levelUpSound = pygame.mixer.Sound(str(levelUpSoundPath))
+levelUpSound.set_volume(soundVolume)
+
+gameOverSoudPath = BASE_DIR / "assets" / "audio" / "gameover.mp3"
+
+gameOverSound = pygame.mixer.Sound(str(gameOverSoudPath))
+gameOverSound.set_volume(soundVolume)
+
+isMuted = False
+
 
 # Checking if the check initialization errors has anything at all
 if check_errors[1] > 0:
@@ -73,7 +110,7 @@ except (FileNotFoundError, ValueError):
     highScore = 0
 
 
-# Setting the difficulty
+                    # SETTING THE DIFFICULTY
 difficulty = "MEDIUM"
 difficultySpeeds = {
     "EASY": 10,
@@ -87,6 +124,12 @@ difficultySpeeds = {
 
 # Game Over Function
 def gameOver(level):
+    # Checks and resets music level
+    playLevelMusic(1)
+
+    # game over sound
+    gameOverSound.play()
+
     # Creating the font
     myFont = pygame.font.SysFont('monaco', 72) #SysFont give you the name of the font as the first argument and the size as the second argument
     GOsurf = myFont.render('Game Over!', True, red) #now that we have the font we have to render it to a surface. We do that through the render function. This function needs three arguments (text, antialias can be a number or boolean, the color, background color default is none)
@@ -179,6 +222,32 @@ def showScore(level=1, gameIsOver=False):
     levelRect.midtop = (600, 25)
     playSurface.blit(levelSurface, levelRect)
 
+
+# MUSIC PLAYING FUNCTION
+def playLevelMusic(level):
+    musicFile = levelMusic.get(level, "background.ogg")
+
+    if musicFile is not None:
+        musicPath = BASE_DIR / "assets" / "audio" / musicFile
+
+        pygame.mixer.music.load(str(musicPath))
+        pygame.mixer.music.play(-1)
+
+def updateAudio():
+    global soundVolume, musicVolume, isMuted
+    
+    if isMuted:
+        pygame.mixer.music.set_volume(0)
+        eatSound.set_volume(0)
+        levelUpSound.set_volume(0)
+        gameOverSound.set_volume(0)
+    else:
+        pygame.mixer.music.set_volume(musicVolume)
+        eatSound.set_volume(soundVolume)
+        levelUpSound.set_volume(soundVolume)
+        gameOverSound.set_volume(soundVolume)
+
+
 def youWin(level):
     winFont = pygame.font.SysFont('monaco', 72)
     winSurf = winFont.render("YOU WIN!", True, gold)
@@ -228,7 +297,7 @@ def youWin(level):
         
         fpsController.tick(60)
 
-        
+        # 
 
 #Main Menu Function 
 
@@ -437,11 +506,18 @@ foodPos = generateFood(snakeBody)
 def gameLoop():
     global changeto, direction, snakePos, snakeBody
     global foodPos, foodSpawn, score, highScore
+    global isMuted
     
-    isPaused = False
- # The current level  divided by the score
-    level = (score // 5) +1
    
+
+    #Initialize the level when the game starts
+    level = (score // 5) + 1
+
+    # Music initialization 
+    playingLevel = 1
+
+    isPaused = False
+    
     pauseFont = pygame.font.SysFont("Arial", 40)
     pauseText = pauseFont.render("PAUSED", True, red)
     pauseRect = pauseText.get_rect(center=(360, 230))
@@ -449,11 +525,14 @@ def gameLoop():
     totalSquares = (
     (SCREEN_WIDTH // 10) *
     ((SCREEN_HEIGHT - HUD_HEIGHT) // 10)
-)
 
+    )
     while True:
         # Events are special occassions where things actually happen. Hit keys, clicks of mouse. 
         # Main Logic
+        
+        # Pausing and unpausing the game
+        # isPaused = not isPaused
 
         # Accepting the inputs to the game
         for event in pygame.event.get():
@@ -470,7 +549,16 @@ def gameLoop():
                 if event.key == pygame.K_DOWN or event.key == ord('s'):
                     changeto = 'DOWN'
                 if event.key == pygame.K_p:
-                     isPaused = not isPaused
+                    isPaused = not isPaused
+
+                    if isPaused:
+                        pygame.mixer.music.pause()
+                    else:
+                        pygame.mixer.music.unpause()
+                if event.key == pygame.K_m:
+                    isMuted = not isMuted
+                    updateAudio()
+
                 if event.key == pygame.K_ESCAPE:
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
                 
@@ -500,9 +588,19 @@ def gameLoop():
             # Creating the snake body and the food position addng
             snakeBody.insert(0, list(snakePos))
             if snakePos[0] == foodPos[0] and snakePos[1] == foodPos[1]:
+                eatSound.play()
+                
                 score += 1
+                # Recalculate the level whenever the snake eats
+                level = (score // 5) +1
 
                 
+                # playing music for the level
+                if level != playingLevel:
+                    levelUpSound.play()
+                    playLevelMusic(level)
+                    playingLevel = level
+
 
                 if score > highScore:
                     highScore = score
